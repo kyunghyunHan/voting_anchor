@@ -6,9 +6,25 @@ declare_id!("FMXhCUbZYKGPFFV4ff8ipp61FUXdXJvRqm7L3tAvpUak");
 pub mod onchain_voting {
     use super::*;
 
-    pub fn initialize(ctx: Context<InitVote>) -> Result<()> {
+    pub fn init_vote_bank(ctx:Context<InitVote>)->Result<()> {
+        let vote_bank =&mut ctx.accounts.vote_account;
+        ctx.accounts.vote_account.is_open_to_vote =true;
         Ok(())
     }
+    pub fn gib_vote(ctx:Context<GibVote>,vote_type:VoteType)->Result<()>{
+        match vote_type {
+            VoteType::GM=>{
+                msg!("Voted for GM ");
+                ctx.accounts.vote_account.gm +=1;
+            },
+            VoteType::GN=>{
+                msg!("Voted for GM ");
+                ctx.accounts.vote_account.gn +=1;
+            }
+        };
+        Ok(())
+    }
+
 }
 
 #[derive(Accounts)]
