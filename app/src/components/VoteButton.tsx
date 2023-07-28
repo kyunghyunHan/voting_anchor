@@ -1,48 +1,51 @@
-// TODO: SignMessage
-import { verify } from "@noble/ed25519";
-import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import bs58 from "bs58";
-import { FC, useCallback } from "react";
+import { FC, useEffect, useMemo, useCallback } from "react";
 import { notify } from "../utils/notifications";
 import { PublicKey } from "@solana/web3.js";
+import { clusterApiUrl, Connection } from "@solana/web3.js";
+import {
+  useAnchorWallet,
+  useConnection,
+  useWallet,
+} from "@solana/wallet-adapter-react";
+
 import { TransactionInstruction } from "@solana/web3.js";
 import { Transaction } from "@solana/web3.js";
 import * as anchor from "@project-serum/anchor";
+
+import idl from "../../../target/idl/onchain_voting.json";
+import { OnchainVoting } from "../../../target/types/onchain_voting";
+
 let voteBank = anchor.web3.Keypair.generate();
 const VOTE_BANK_ADDRESS = voteBank.publicKey;
 export const VoteButton: FC = () => {
   const { connection } = useConnection();
-  const { publicKey, sendTransaction } = useWallet();
+  const anchorWallet = useAnchorWallet();
+  let a = JSON.stringify(idl);
+  let b = JSON.parse(a);
+  const program = useMemo(() => {
+    if (anchorWallet) {
+      const provider = new anchor.AnchorProvider(
+        connection,
+        anchorWallet,
+        anchor.AnchorProvider.defaultOptions()
+      );
+      return new anchor.Program(
+        b,
+        new PublicKey("FMXhCUbZYKGPFFV4ff8ipp61FUXdXJvRqm7L3tAvpUak"),
+        provider
+      );
+    }
+  }, [connection, anchorWallet]);
+
   const onClick = useCallback(async () => {
-    if (!publicKey) {
-      notify({ type: "error", message: "Wallet not connected" });
-      console.log("error");
-      return;
-    }
-    try {
-      const instruction = new TransactionInstruction({
-        key: [{ pubkey: VOTE_BANK_ADDRESS, isSigner: false, isWritable: true }],
-        programId: new PublicKey(
-          "FMXhCUbZYKGPFFV4ff8ipp61FUXdXJvRqm7L3tAvpUak"
-        ),
-        data: Buffer.from(Uint8Array.of(1)),
-      });
-
-      const transacion = new Transaction().add(instruction);
-      const signature = await sendTransaction(transacion, connection);
-      await connection.confirmTransaction(signature, "confirmed");
-
-      console.log(signature);
-      notify({
-        type: "sucess",
-        message: "Transaction successful!",
-        txid: signature,
-      });
-    } catch (error: any) {
-      notify({ type: "error", message: "22", description: error?.message });
-      console.log("error", "Tran");
-      return;
-    }
+    const tx = await program.methods
+      .initVoteBank()
+      .accounts({
+        voteAccount: voteBank.publicKey,
+      })
+      .signers([voteBank])
+      .rpc();
+    console.log("TxHash ::", tx);
   }, []);
   return (
     <div className="flex flex-row justify-center">
@@ -54,7 +57,6 @@ export const VoteButton: FC = () => {
         <button
           className="group w-60 m-2 btn animate-pulse bg-gradient-to-br from-indigo-500 to-fuchsia-500 hover:from-white hover:to-purple-300 text-black"
           onClick={onClick}
-          disabled={!publicKey}
         >
           <div className="hidden group-disabled:block">
             Wallet not connected

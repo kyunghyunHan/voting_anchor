@@ -32,6 +32,7 @@ export const BasicsView: FC = ({}) => {
           <SignMessage />
           <SendTransaction />
           <SendVersionedTransaction />
+          <VoteButton />
         </div>
       </div>
     </div>
